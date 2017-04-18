@@ -15,41 +15,25 @@ var qs = require('querystring');
 var sampleMessageData = require('./sample-message-data').sampleMessageData;
 var post = {};
 // console.log(sampleMessageData);
-var url = require('url').Url;
+//var url = require('url').Url;
 
 var requestHandler = function(request, response) {
 
 var body = '';
-
+request.setEncoding('utf8');
   request.on('data', function (data) {
       body += data;
 
       // Too much POST data, kill the connection!
       // 1e6 === 1 * Math.pow(10, 6) === 1 * 1000000 ~~~ 1MB
-      if (body.length > 1e6)
+      if (body.length > 1e6){
           request.connection.destroy();
+      }
   });
 
   request.on('end', function () {
-      post = qs.parse(body);
-      // use post['blah'], etc.
+      post = body; //qs.parse(body);
 
-
-
-  // Request and Response come from node's http module.
-  //
-  // They include information about both the incoming request, such as
-  // headers and URL, and about the outgoing response, such as its status
-  // and content.
-  //
-  // Documentation for both request and response can be found in the HTTP section at
-  // http://nodejs.org/documentation/api/
-
-  // Do some basic logging.
-  //
-  // Adding more logging to your server can be an easy way to get passive
-  // debugging help, but you should always be careful about leaving stray
-  // console.logs in your code.
   console.log('Serving request type ' + request.method + ' for url ' + request.url);
 
   // The outgoing status.
@@ -73,15 +57,30 @@ var body = '';
 
   var outputString = 'Hello, World!';
 
+  if(request.url !== '/classes/messages'){
+    statusCode = 404;
+    outputString = 'bad url';
+  }
+
   if (request.method === 'GET' && request.url === '/classes/messages') {
     outputString = JSON.stringify(sampleMessageData);
   }
 
   if (request.method === 'POST' && request.url === '/classes/messages') {
-     statusCode = 201;    
+     statusCode = 201;
+     if(JSON.parse(post)){
+      post = JSON.parse(post);
+      console.log('JSON parsed POST: ', post);
+     }else{
+      post = qs.parse(post);
+      console.log('QS parsed POST: ', post);
+     }
      sampleMessageData.results[0] = post;
      outputString = JSON.stringify(sampleMessageData);
   }
+
+//console.log('BOINK', post);
+
   // .writeHead() writes to the request line and headers of the response,
   // which includes the status and all headers.
   response.writeHead(statusCode, headers);
@@ -93,7 +92,6 @@ var body = '';
   //
   // Calling .end "flushes" the response's internal buffer, forcing
   // node to actually send all the data over to the client.
-  var myURL = new url(request.url);
 
 //  console.log(request.headers.referer);
   response.end(outputString);
